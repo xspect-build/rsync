@@ -37,6 +37,6 @@
   },
   "homepage": "https://github.com/xspect-build/rsync#readme",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   }
 }

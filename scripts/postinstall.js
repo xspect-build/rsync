@@ -33,6 +33,10 @@ function downloadFile(url, destinationPath, redirects = 5) {
           }
 
           const redirectUrl = new URL(res.headers.location, url).toString();
+          if (!redirectUrl.startsWith('https://')) {
+            reject(new Error(`Refusing to follow non-HTTPS redirect: ${redirectUrl}`));
+            return;
+          }
           res.resume();
           downloadFile(redirectUrl, destinationPath, redirects - 1).then(resolve, reject);
           return;
@@ -84,6 +88,20 @@ function findBinary(rootDir, binaryName) {
   return null;
 }
 
+function assertSafeTarEntry(entryPath) {
+  const normalized = path.posix.normalize(entryPath.replace(/\\/g, '/'));
+  const isWindowsAbsolutePath = /^[a-zA-Z]:[\\/]/.test(entryPath);
+
+  if (
+    normalized === '..' ||
+    normalized.startsWith('../') ||
+    path.posix.isAbsolute(normalized) ||
+    isWindowsAbsolutePath
+  ) {
+    throw new Error(`Unsafe archive entry path: ${entryPath}`);
+  }
+}
+
 (async () => {
   const target = resolveTarget();
 
@@ -93,7 +111,8 @@ function findBinary(rootDir, binaryName) {
   }
 
   const assetUrl = getAssetUrl(target);
-  const tempTarball = path.join(os.tmpdir(), `oc-rsync-${process.pid}-${Date.now()}.tar.gz`);
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oc-rsync-'));
+  const tempTarball = path.join(tempDir, 'archive.tar.gz');
 
   try {
     fs.rmSync(installRoot, { recursive: true, force: true });
@@ -104,7 +123,11 @@ function findBinary(rootDir, binaryName) {
     await tar.x({
       file: tempTarball,
       cwd: installRoot,
-      strict: true
+      strict: true,
+      filter: (entryPath) => {
+        assertSafeTarEntry(entryPath);
+        return true;
+      }
     });
 
     const binaryPath = findBinary(installRoot, target.binaryName);
@@ -132,6 +155,6 @@ function findBinary(rootDir, binaryName) {
     console.error(`[rsync] Failed to install binary: ${error.message}`);
     process.exitCode = 1;
   } finally {
-    fs.rmSync(tempTarball, { force: true });
+    fs.rmSync(tempDir, { recursive: true, force: true });
   }
 })();
