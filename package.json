@@ -1,0 +1,42 @@
+{
+  "name": "@xspect-build/rsync",
+  "version": "0.6.0",
+  "description": "Install prebuilt oc-rsync binaries from oferchen/rsync v0.6.0",
+  "main": "lib/index.js",
+  "files": [
+    "bin",
+    "lib",
+    "scripts",
+    "README.md"
+  ],
+  "bin": {
+    "rsync": "bin/rsync.js",
+    "oc-rsync": "bin/rsync.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "tar": "^7.5.13"
+  },
+  "keywords": [
+    "rsync",
+    "oc-rsync",
+    "binary",
+    "prebuilt"
+  ],
+  "author": "xspect-build",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xspect-build/rsync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xspect-build/rsync/issues"
+  },
+  "homepage": "https://github.com/xspect-build/rsync#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
