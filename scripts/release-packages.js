@@ -1,0 +1,191 @@
+'use strict';
+
+const fs = require('node:fs');
+const https = require('node:https');
+const os = require('node:os');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
+
+const { TARGETS, getAssetUrl } = require('../lib/targets');
+
+const packageRoot = path.join(__dirname, '..');
+const targetEntries = Object.entries(TARGETS);
+
+function run(command, args) {
+  const result = spawnSync(command, args, {
+    cwd: packageRoot,
+    stdio: 'inherit'
+  });
+
+  if (result.status !== 0) {
+    throw new Error(`Command failed: ${command} ${args.join(' ')}`);
+  }
+}
+
+function downloadFile(url, destinationPath, redirects = 5) {
+  return new Promise((resolve, reject) => {
+    if (!url.startsWith('https://')) {
+      reject(new Error(`Refusing to download non-HTTPS URL: ${url}`));
+      return;
+    }
+
+    const req = https.get(url, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        if (redirects <= 0) {
+          reject(new Error(`Too many redirects while downloading ${url}`));
+          return;
+        }
+
+        const redirectUrl = new URL(res.headers.location, url).toString();
+        if (!redirectUrl.startsWith('https://')) {
+          reject(new Error(`Refusing to follow non-HTTPS redirect: ${redirectUrl}`));
+          return;
+        }
+
+        res.resume();
+        downloadFile(redirectUrl, destinationPath, redirects - 1).then(resolve, reject);
+        return;
+      }
+
+      if (res.statusCode !== 200) {
+        reject(new Error(`Failed to download ${url}. Status code: ${res.statusCode}`));
+        return;
+      }
+
+      const fileStream = fs.createWriteStream(destinationPath);
+      res.pipe(fileStream);
+      fileStream.on('finish', () => fileStream.close(resolve));
+      fileStream.on('error', reject);
+    });
+
+    req.setTimeout(120000, () => {
+      req.destroy(new Error(`Request timed out while downloading ${url}`));
+    });
+
+    req.on('error', reject);
+  });
+}
+
+function findBinary(rootDir, binaryName) {
+  const entries = fs.readdirSync(rootDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(rootDir, entry.name);
+    if (entry.isDirectory()) {
+      const nestedPath = findBinary(fullPath, binaryName);
+      if (nestedPath) {
+        return nestedPath;
+      }
+      continue;
+    }
+
+    if (entry.isFile() && entry.name === binaryName) {
+      return fullPath;
+    }
+  }
+
+  return null;
+}
+
+async function stageTarget(target) {
+  const assetUrl = getAssetUrl(target);
+  const packageDir = path.join(packageRoot, 'packages', target.packageName.split('/').pop());
+  const binDir = path.join(packageDir, 'bin');
+  const destinationBinaryPath = path.join(binDir, target.binaryName);
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsync-release-'));
+  const tempTarPath = path.join(tempDir, 'asset.tar.gz');
+  const extractDir = path.join(tempDir, 'extract');
+
+  fs.mkdirSync(extractDir, { recursive: true });
+  fs.mkdirSync(binDir, { recursive: true });
+
+  try {
+    await downloadFile(assetUrl, tempTarPath);
+    run('tar', ['-xzf', tempTarPath, '-C', extractDir]);
+
+    const sourceBinaryPath = findBinary(extractDir, target.binaryName);
+    if (!sourceBinaryPath) {
+      throw new Error(`Could not find ${target.binaryName} from ${target.assetName}`);
+    }
+
+    fs.rmSync(destinationBinaryPath, { force: true });
+    fs.copyFileSync(sourceBinaryPath, destinationBinaryPath);
+    if (target.binaryName !== 'oc-rsync.exe') {
+      fs.chmodSync(destinationBinaryPath, 0o755);
+    }
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+async function stageAll() {
+  for (const [, target] of targetEntries) {
+    console.log(`[release] staging ${target.packageName}`);
+    await stageTarget(target);
+  }
+}
+
+function packAll(distDir) {
+  const absoluteDistDir = path.isAbsolute(distDir) ? distDir : path.join(packageRoot, distDir);
+  fs.mkdirSync(absoluteDistDir, { recursive: true });
+
+  for (const [, target] of targetEntries) {
+    const packageDir = path.join('packages', target.packageName.split('/').pop());
+    console.log(`[release] packing ${target.packageName}`);
+    run('npm', ['pack', packageDir, '--pack-destination', absoluteDistDir]);
+  }
+
+  console.log('[release] packing @xspect-build/rsync');
+  run('npm', ['pack', '.', '--pack-destination', absoluteDistDir]);
+}
+
+function publishAll(tag) {
+  const publishArgs = ['publish', '--access', 'public'];
+  if (tag) {
+    publishArgs.push('--tag', tag);
+  }
+
+  for (const [, target] of targetEntries) {
+    const packageDir = path.join('packages', target.packageName.split('/').pop());
+    console.log(`[release] publishing ${target.packageName}`);
+    run('npm', publishArgs.concat(packageDir));
+  }
+
+  console.log('[release] publishing @xspect-build/rsync');
+  run('npm', publishArgs.concat('.'));
+}
+
+function getOption(name, fallback = null) {
+  const arg = process.argv.find((item) => item.startsWith(`${name}=`));
+  if (!arg) {
+    return fallback;
+  }
+
+  return arg.slice(name.length + 1);
+}
+
+async function main() {
+  const command = process.argv[2];
+  const distDir = getOption('--dist', 'dist');
+  const tag = getOption('--tag', null);
+
+  if (command === 'pack') {
+    await stageAll();
+    packAll(distDir);
+    return;
+  }
+
+  if (command === 'publish') {
+    await stageAll();
+    publishAll(tag);
+    return;
+  }
+
+  console.error('Usage: node scripts/release-packages.js <pack|publish> [--dist=<dir>] [--tag=<tag>]');
+  process.exit(1);
+}
+
+main().catch((error) => {
+  console.error(`[release] failed: ${error.message}`);
+  process.exit(1);
+});

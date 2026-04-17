@@ -26,4 +26,24 @@ oc-rsync --version
 
 ## CI 打包说明
 
-`/.github/workflows/build-platform-packages.yml` 会在 CI 中下载所有主流平台二进制，写入各平台子包 `bin/` 目录并执行 `npm pack`，用于后续分发。
+`/.github/workflows/build-platform-packages.yml` 通过统一脚本完成下载与打包：
+
+```bash
+npm run release:pack
+```
+
+脚本会下载所有主流平台二进制，写入各平台子包 `bin/` 目录，并将各平台包与主包一起 `npm pack` 到 `dist/`。
+
+## 本地发布
+
+本地登录 npm 后可直接执行：
+
+```bash
+npm run release:publish
+```
+
+可选指定 tag：
+
+```bash
+npm run release:publish -- --tag=next
+```
