@@ -80,6 +80,7 @@ jobs:
 
   pack-main:
     runs-on: ubuntu-latest
+    # Main package is packed after platform jobs so CI validates all platform artifacts first.
     needs: build-platform-packages
 
     steps:
