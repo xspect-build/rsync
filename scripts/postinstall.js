@@ -113,6 +113,7 @@ function assertSafeTarEntry(entryPath) {
   const assetUrl = getAssetUrl(target);
   const secureTmpBase = path.join(os.tmpdir(), 'xspect-build-rsync');
   fs.mkdirSync(secureTmpBase, { recursive: true, mode: 0o700 });
+  // recursive mkdir does not tighten permissions for pre-existing directories.
   fs.chmodSync(secureTmpBase, 0o700);
 
   const tempDir = fs.mkdtempSync(path.join(secureTmpBase, 'oc-rsync-'));
