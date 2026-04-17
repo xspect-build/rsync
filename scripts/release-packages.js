@@ -9,7 +9,7 @@ const { spawnSync } = require('node:child_process');
 const { TARGETS, getAssetUrl } = require('../lib/targets');
 
 const packageRoot = path.join(__dirname, '..');
-const targetEntries = Object.entries(TARGETS);
+const targets = Object.values(TARGETS);
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -119,7 +119,7 @@ async function stageTarget(target) {
 }
 
 async function stageAll() {
-  for (const [, target] of targetEntries) {
+  for (const target of targets) {
     console.log(`[release] staging ${target.packageName}`);
     await stageTarget(target);
   }
@@ -129,7 +129,7 @@ function packAll(distDir) {
   const absoluteDistDir = path.isAbsolute(distDir) ? distDir : path.join(packageRoot, distDir);
   fs.mkdirSync(absoluteDistDir, { recursive: true });
 
-  for (const [, target] of targetEntries) {
+  for (const target of targets) {
     const packageDir = path.join('packages', target.packageName.split('/').pop());
     console.log(`[release] packing ${target.packageName}`);
     run('npm', ['pack', packageDir, '--pack-destination', absoluteDistDir]);
@@ -145,7 +145,7 @@ function publishAll(tag) {
     publishArgs.push('--tag', tag);
   }
 
-  for (const [, target] of targetEntries) {
+  for (const target of targets) {
     const packageDir = path.join('packages', target.packageName.split('/').pop());
     console.log(`[release] publishing ${target.packageName}`);
     run('npm', publishArgs.concat(packageDir));
