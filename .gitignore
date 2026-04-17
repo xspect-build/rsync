@@ -1,0 +1,5 @@
+node_modules
+runtime
+dist
+packages/*/bin/oc-rsync
+packages/*/bin/oc-rsync.exe

@@ -1,0 +1,17 @@
+{
+  "name": "@xspect-build/rsync-win32-x64",
+  "version": "0.6.0",
+  "description": "Prebuilt oc-rsync binary for win32 x64",
+  "main": "index.js",
+  "files": [
+    "bin",
+    "index.js"
+  ],
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "license": "MIT"
+}

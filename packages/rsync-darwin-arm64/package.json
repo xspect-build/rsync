@@ -1,0 +1,17 @@
+{
+  "name": "@xspect-build/rsync-darwin-arm64",
+  "version": "0.6.0",
+  "description": "Prebuilt oc-rsync binary for darwin arm64",
+  "main": "index.js",
+  "files": [
+    "bin",
+    "index.js"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "license": "MIT"
+}

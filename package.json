@@ -1,0 +1,46 @@
+{
+  "name": "@xspect-build/rsync",
+  "version": "0.6.0",
+  "description": "Use prebuilt oc-rsync binaries via platform optionalDependencies",
+  "main": "lib/index.js",
+  "files": [
+    "bin",
+    "lib",
+    "README.md"
+  ],
+  "bin": {
+    "rsync": "bin/rsync.js",
+    "oc-rsync": "bin/rsync.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "release:pack": "node scripts/release-packages.js pack --dist dist",
+    "release:publish": "node scripts/release-packages.js publish"
+  },
+  "optionalDependencies": {
+    "@xspect-build/rsync-linux-x64": "0.6.0",
+    "@xspect-build/rsync-linux-arm64": "0.6.0",
+    "@xspect-build/rsync-darwin-x64": "0.6.0",
+    "@xspect-build/rsync-darwin-arm64": "0.6.0",
+    "@xspect-build/rsync-win32-x64": "0.6.0"
+  },
+  "keywords": [
+    "rsync",
+    "oc-rsync",
+    "binary",
+    "prebuilt"
+  ],
+  "author": "xspect-build",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xspect-build/rsync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xspect-build/rsync/issues"
+  },
+  "homepage": "https://github.com/xspect-build/rsync#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
