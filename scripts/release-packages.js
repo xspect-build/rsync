@@ -13,14 +13,15 @@ const targets = Object.values(TARGETS);
 const DOWNLOAD_TIMEOUT_MS = 120000;
 const EXECUTABLE_MODE = 0o755;
 
-function run(command, args) {
+function run(command, args, options = {}) {
+  const cwd = options.cwd || packageRoot;
   const result = spawnSync(command, args, {
-    cwd: packageRoot,
+    cwd,
     stdio: 'inherit'
   });
 
   if (result.status !== 0) {
-    throw new Error(`Command failed: ${command} ${args.join(' ')}`);
+    throw new Error(`Command failed (cwd=${cwd}): ${command} ${args.join(' ')}`);
   }
 }
 
@@ -132,13 +133,13 @@ function packAll(distDir) {
   fs.mkdirSync(absoluteDistDir, { recursive: true });
 
   for (const target of targets) {
-    const packageDir = path.join('packages', target.packageName.split('/').pop());
+    const packageDir = path.join(packageRoot, 'packages', target.packageName.split('/').pop());
     console.log(`[release] packing ${target.packageName}`);
-    run('npm', ['pack', packageDir, '--pack-destination', absoluteDistDir]);
+    run('npm', ['pack', '--pack-destination', absoluteDistDir], { cwd: packageDir });
   }
 
   console.log('[release] packing @xspect-build/rsync');
-  run('npm', ['pack', '.', '--pack-destination', absoluteDistDir]);
+  run('npm', ['pack', '--pack-destination', absoluteDistDir]);
 }
 
 function publishAll(tag) {
@@ -148,13 +149,13 @@ function publishAll(tag) {
   }
 
   for (const target of targets) {
-    const packageDir = path.join('packages', target.packageName.split('/').pop());
+    const packageDir = path.join(packageRoot, 'packages', target.packageName.split('/').pop());
     console.log(`[release] publishing ${target.packageName}`);
-    run('npm', publishArgs.concat(packageDir));
+    run('npm', publishArgs, { cwd: packageDir });
   }
 
   console.log('[release] publishing @xspect-build/rsync');
-  run('npm', publishArgs.concat('.'));
+  run('npm', publishArgs);
 }
 
 function getOption(name, fallback = null) {
