@@ -111,7 +111,11 @@ function assertSafeTarEntry(entryPath) {
   }
 
   const assetUrl = getAssetUrl(target);
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oc-rsync-'));
+  const secureTmpBase = path.join(os.tmpdir(), 'xspect-build-rsync');
+  fs.mkdirSync(secureTmpBase, { recursive: true, mode: 0o700 });
+  fs.chmodSync(secureTmpBase, 0o700);
+
+  const tempDir = fs.mkdtempSync(path.join(secureTmpBase, 'oc-rsync-'));
   const tempTarball = path.join(tempDir, 'archive.tar.gz');
 
   try {
