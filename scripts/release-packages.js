@@ -110,7 +110,7 @@ async function stageTarget(target) {
 
     fs.rmSync(destinationBinaryPath, { force: true });
     fs.copyFileSync(sourceBinaryPath, destinationBinaryPath);
-    if (target.binaryName !== 'oc-rsync.exe') {
+    if (target.platform !== 'win32') {
       fs.chmodSync(destinationBinaryPath, 0o755);
     }
   } finally {
@@ -156,12 +156,18 @@ function publishAll(tag) {
 }
 
 function getOption(name, fallback = null) {
-  const arg = process.argv.find((item) => item.startsWith(`${name}=`));
-  if (!arg) {
-    return fallback;
+  for (let i = 0; i < process.argv.length; i += 1) {
+    const arg = process.argv[i];
+    if (arg.startsWith(`${name}=`)) {
+      return arg.slice(name.length + 1);
+    }
+
+    if (arg === name && i + 1 < process.argv.length) {
+      return process.argv[i + 1];
+    }
   }
 
-  return arg.slice(name.length + 1);
+  return fallback;
 }
 
 async function main() {
