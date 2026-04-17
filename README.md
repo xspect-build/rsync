@@ -1,6 +1,6 @@
 # rsync
 
-通过 npm 安装主流平台的 `oc-rsync` 预编译产物（来源：`oferchen/rsync` `v0.6.0`）。
+通过 npm `optionalDependencies` 分发主流平台 `oc-rsync` 预编译产物（来源：`oferchen/rsync` `v0.6.0`）。
 
 ## 安装
 
@@ -8,13 +8,13 @@
 npm install -g @xspect-build/rsync
 ```
 
-安装时会根据当前平台自动下载：
+主包会按平台安装对应可选依赖包：
 
-- Linux x64: `oc-rsync-0.6.0-linux-x86_64-musl.tar.gz`
-- Linux arm64: `oc-rsync-0.6.0-linux-aarch64-musl.tar.gz`
-- macOS x64: `oc-rsync-0.6.0-darwin-x86_64.tar.gz`
-- macOS arm64: `oc-rsync-0.6.0-darwin-aarch64.tar.gz`
-- Windows x64: `oc-rsync-0.6.0-windows-x86_64.tar.gz`
+- `@xspect-build/rsync-linux-x64`
+- `@xspect-build/rsync-linux-arm64`
+- `@xspect-build/rsync-darwin-x64`
+- `@xspect-build/rsync-darwin-arm64`
+- `@xspect-build/rsync-win32-x64`
 
 ## 使用
 
@@ -23,3 +23,7 @@ rsync --version
 # 或
 oc-rsync --version
 ```
+
+## CI 打包说明
+
+`/.github/workflows/build-platform-packages.yml` 会在 CI 中下载所有主流平台二进制，写入各平台子包 `bin/` 目录并执行 `npm pack`，用于后续分发。

@@ -1,12 +1,11 @@
 {
   "name": "@xspect-build/rsync",
   "version": "0.6.0",
-  "description": "Install prebuilt oc-rsync binaries from oferchen/rsync v0.6.0",
+  "description": "Use prebuilt oc-rsync binaries via platform optionalDependencies",
   "main": "lib/index.js",
   "files": [
     "bin",
     "lib",
-    "scripts",
     "README.md"
   ],
   "bin": {
@@ -14,11 +13,14 @@
     "oc-rsync": "bin/rsync.js"
   },
   "scripts": {
-    "postinstall": "node scripts/postinstall.js",
     "test": "node --test"
   },
-  "dependencies": {
-    "tar": "^7.5.13"
+  "optionalDependencies": {
+    "@xspect-build/rsync-linux-x64": "0.6.0",
+    "@xspect-build/rsync-linux-arm64": "0.6.0",
+    "@xspect-build/rsync-darwin-x64": "0.6.0",
+    "@xspect-build/rsync-darwin-arm64": "0.6.0",
+    "@xspect-build/rsync-win32-x64": "0.6.0"
   },
   "keywords": [
     "rsync",
