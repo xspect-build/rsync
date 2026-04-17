@@ -10,6 +10,8 @@ const { TARGETS, getAssetUrl } = require('../lib/targets');
 
 const packageRoot = path.join(__dirname, '..');
 const targets = Object.values(TARGETS);
+const DOWNLOAD_TIMEOUT_MS = 120000;
+const EXECUTABLE_MODE = 0o755;
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -58,7 +60,7 @@ function downloadFile(url, destinationPath, redirects = 5) {
       fileStream.on('error', reject);
     });
 
-    req.setTimeout(120000, () => {
+    req.setTimeout(DOWNLOAD_TIMEOUT_MS, () => {
       req.destroy(new Error(`Request timed out while downloading ${url}`));
     });
 
@@ -111,7 +113,7 @@ async function stageTarget(target) {
     fs.rmSync(destinationBinaryPath, { force: true });
     fs.copyFileSync(sourceBinaryPath, destinationBinaryPath);
     if (target.platform !== 'win32') {
-      fs.chmodSync(destinationBinaryPath, 0o755);
+      fs.chmodSync(destinationBinaryPath, EXECUTABLE_MODE);
     }
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
