@@ -133,7 +133,7 @@ function buildRsync(sourceDir, target) {
   const targetKey = `${target.platform}-${target.arch}`;
   const hostKey = `${process.platform}-${process.arch}`;
   if (targetKey !== hostKey) {
-    throw new Error(`Target ${targetKey} must be built on matching host ${hostKey}`);
+    throw new Error(`Cross-compilation not supported: target ${targetKey} must be built on ${hostKey}`);
   }
 
   const env = buildEnvironment(target);
@@ -145,7 +145,8 @@ function buildRsync(sourceDir, target) {
   ];
 
   run('./configure', configureArgs, { cwd: sourceDir, env });
-  run('make', ['-j', String(Math.max(1, os.cpus().length)), 'rsync'], { cwd: sourceDir, env });
+  const buildJobs = process.env.MAKE_JOBS || String(Math.max(1, Math.min(os.cpus().length, 8)));
+  run('make', ['-j', buildJobs, 'rsync'], { cwd: sourceDir, env });
 
   const binaryPath = path.join(sourceDir, target.binaryName);
   if (target.static) {
