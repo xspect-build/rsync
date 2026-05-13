@@ -109,12 +109,12 @@ function getBuildTargets() {
 
 function findExtractedSourceDir(extractDir) {
   const entries = fs.readdirSync(extractDir, { withFileTypes: true });
-  const sourceDir = entries.find((entry) => entry.isDirectory() && entry.name.startsWith('rsync-'));
-  if (!sourceDir) {
-    throw new Error('Could not find extracted rsync source directory');
+  const sourceDirs = entries.filter((entry) => entry.isDirectory() && entry.name.startsWith('rsync-'));
+  if (sourceDirs.length !== 1) {
+    throw new Error(`Expected one extracted rsync source directory, found ${sourceDirs.length}`);
   }
 
-  return path.join(extractDir, sourceDir.name);
+  return path.join(extractDir, sourceDirs[0].name);
 }
 
 function buildEnvironment(target) {
@@ -145,8 +145,8 @@ function buildRsync(sourceDir, target) {
   ];
 
   run('./configure', configureArgs, { cwd: sourceDir, env });
-  const parallelJobs = process.env.MAKE_JOBS || String(Math.max(1, Math.min(os.cpus().length, 8)));
-  run('make', ['-j', parallelJobs, 'rsync'], { cwd: sourceDir, env });
+  const jobCount = process.env.MAKE_JOBS || String(Math.max(1, Math.min(os.cpus().length, 8)));
+  run('make', ['-j', jobCount, 'rsync'], { cwd: sourceDir, env });
 
   const binaryPath = path.join(sourceDir, target.binaryName);
   if (target.static) {
