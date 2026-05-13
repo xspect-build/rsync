@@ -7,6 +7,7 @@ on:
       - 'v*'
 
 permissions:
+  id-token: write  # Required for OIDC
   contents: read
 
 jobs:
@@ -27,12 +28,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
-
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false  # never use caching in release builds
       - name: Install Linux static build tools
         if: runner.os == 'Linux'
         run: |
@@ -45,7 +47,7 @@ jobs:
       - name: Build rsync and pack target package
         run: npm run release:pack -- --target=${{ matrix.target }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: npm-packages-${{ matrix.target }}
           path: dist/*.tgz
@@ -55,13 +57,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
-
+          package-manager-cache: false  # never use caching in release builds
       - name: Download all platform packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: npm-packages-*
           path: dist
