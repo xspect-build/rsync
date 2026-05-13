@@ -1,6 +1,6 @@
 # rsync
 
-通过 npm `optionalDependencies` 分发主流平台 `oc-rsync` 预编译产物（来源：`oferchen/rsync` `v0.6.0`）。
+通过 npm `optionalDependencies` 分发主流平台 `rsync` 预编译产物（来源：`RsyncProject/rsync` `v3.4.2`）。
 
 ## 安装
 
@@ -14,14 +14,11 @@ npm install -g @xspect-build/rsync
 - `@xspect-build/rsync-linux-arm64`
 - `@xspect-build/rsync-darwin-x64`
 - `@xspect-build/rsync-darwin-arm64`
-- `@xspect-build/rsync-win32-x64`
 
 ## 使用
 
 ```bash
 rsync --version
-# 或
-oc-rsync --version
 ```
 
 ## CI 打包说明
@@ -32,7 +29,7 @@ oc-rsync --version
 npm run release:pack
 ```
 
-脚本会下载所有主流平台二进制，写入各平台子包 `bin/` 目录，并将各平台包与主包一起 `npm pack` 到 `dist/`。
+脚本会下载上游 rsync 源码并按目标平台编译，写入各平台子包 `bin/` 目录，并将各平台包与主包一起 `npm pack` 到 `dist/`。Linux 目标使用 `musl-gcc` 和 `-static` 构建，并在打包前校验产物为静态链接。
 
 ## 本地发布
 

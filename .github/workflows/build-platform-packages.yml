@@ -11,7 +11,20 @@ permissions:
 
 jobs:
   build-packages:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          - target: darwin-x64
+            runner: macos-13
+          - target: darwin-arm64
+            runner: macos-latest
+
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - uses: actions/checkout@v4
@@ -20,10 +33,19 @@ jobs:
         with:
           node-version: 20
 
-      - name: Stage binaries and pack all packages
-        run: npm run release:pack
+      - name: Install Linux static build tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y file make musl-tools
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build rsync and pack target package
+        run: npm run release:pack -- --target=${{ matrix.target }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: npm-packages
+          name: npm-packages-${{ matrix.target }}
           path: dist/*.tgz

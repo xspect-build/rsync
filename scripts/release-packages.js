@@ -17,12 +17,34 @@ function run(command, args, options = {}) {
   const cwd = options.cwd || packageRoot;
   const result = spawnSync(command, args, {
     cwd,
+    env: {
+      ...process.env,
+      ...(options.env || {})
+    },
     stdio: 'inherit'
   });
 
   if (result.status !== 0) {
     throw new Error(`Command failed (cwd=${cwd}): ${command} ${args.join(' ')}`);
   }
+}
+
+function runCapture(command, args, options = {}) {
+  const cwd = options.cwd || packageRoot;
+  const result = spawnSync(command, args, {
+    cwd,
+    env: {
+      ...process.env,
+      ...(options.env || {})
+    },
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    throw new Error(`Command failed (cwd=${cwd}): ${command} ${args.join(' ')}\n${result.stderr || result.stdout}`);
+  }
+
+  return result.stdout;
 }
 
 function downloadFile(url, destinationPath, redirects = 5) {
@@ -69,25 +91,69 @@ function downloadFile(url, destinationPath, redirects = 5) {
   });
 }
 
-function findBinary(rootDir, binaryName) {
-  const entries = fs.readdirSync(rootDir, { withFileTypes: true });
+function getBuildTargets() {
+  const targetOption = getOption('--target', null);
+  if (!targetOption) {
+    return targets;
+  }
 
-  for (const entry of entries) {
-    const fullPath = path.join(rootDir, entry.name);
-    if (entry.isDirectory()) {
-      const nestedPath = findBinary(fullPath, binaryName);
-      if (nestedPath) {
-        return nestedPath;
-      }
-      continue;
+  return targetOption.split(',').map((targetKey) => {
+    const target = TARGETS[targetKey.trim()];
+    if (!target) {
+      throw new Error(`Unknown target: ${targetKey}`);
     }
 
-    if (entry.isFile() && entry.name === binaryName) {
-      return fullPath;
+    return target;
+  });
+}
+
+function findExtractedSourceDir(extractDir) {
+  const entries = fs.readdirSync(extractDir, { withFileTypes: true });
+  const sourceDir = entries.find((entry) => entry.isDirectory() && entry.name.startsWith('rsync-'));
+  if (!sourceDir) {
+    throw new Error('Could not find extracted rsync source directory');
+  }
+
+  return path.join(extractDir, sourceDir.name);
+}
+
+function buildEnvironment(target) {
+  if (target.static) {
+    return {
+      CC: process.env.CC || 'musl-gcc',
+      CFLAGS: process.env.CFLAGS || '-Os',
+      LDFLAGS: process.env.LDFLAGS || '-static'
+    };
+  }
+
+  return {};
+}
+
+function buildRsync(sourceDir, target) {
+  if (target.platform !== process.platform || target.arch !== process.arch) {
+    throw new Error(`Target ${target.platform}-${target.arch} must be built on matching host ${process.platform}-${process.arch}`);
+  }
+
+  const env = buildEnvironment(target);
+  const configureArgs = [
+    '--disable-openssl',
+    '--disable-xxhash',
+    '--disable-zstd',
+    '--disable-lz4'
+  ];
+
+  run('./configure', configureArgs, { cwd: sourceDir, env });
+  run('make', ['-j', String(os.cpus().length || 2), 'rsync'], { cwd: sourceDir, env });
+
+  const binaryPath = path.join(sourceDir, target.binaryName);
+  if (target.static) {
+    const fileOutput = runCapture('file', [binaryPath]);
+    if (!fileOutput.includes('statically linked')) {
+      throw new Error(`Linux binary is not statically linked: ${fileOutput.trim()}`);
     }
   }
 
-  return null;
+  return binaryPath;
 }
 
 async function stageTarget(target) {
@@ -106,23 +172,22 @@ async function stageTarget(target) {
     await downloadFile(assetUrl, tempTarPath);
     run('tar', ['-xzf', tempTarPath, '-C', extractDir]);
 
-    const sourceBinaryPath = findBinary(extractDir, target.binaryName);
+    const sourceDir = findExtractedSourceDir(extractDir);
+    const sourceBinaryPath = buildRsync(sourceDir, target);
     if (!sourceBinaryPath) {
-      throw new Error(`Could not find ${target.binaryName} from ${target.assetName}`);
+      throw new Error(`Could not build ${target.binaryName}`);
     }
 
     fs.rmSync(destinationBinaryPath, { force: true });
     fs.copyFileSync(sourceBinaryPath, destinationBinaryPath);
-    if (target.platform !== 'win32') {
-      fs.chmodSync(destinationBinaryPath, EXECUTABLE_MODE);
-    }
+    fs.chmodSync(destinationBinaryPath, EXECUTABLE_MODE);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
 async function stageAll() {
-  for (const target of targets) {
+  for (const target of getBuildTargets()) {
     console.log(`[release] staging ${target.packageName}`);
     await stageTarget(target);
   }
@@ -132,7 +197,7 @@ function packAll(distDir) {
   const absoluteDistDir = path.isAbsolute(distDir) ? distDir : path.join(packageRoot, distDir);
   fs.mkdirSync(absoluteDistDir, { recursive: true });
 
-  for (const target of targets) {
+  for (const target of getBuildTargets()) {
     const packageDir = path.join(packageRoot, 'packages', target.packageName.split('/').pop());
     console.log(`[release] packing ${target.packageName}`);
     run('npm', ['pack', '--pack-destination', absoluteDistDir], { cwd: packageDir });
@@ -148,7 +213,7 @@ function publishAll(tag) {
     publishArgs.push('--tag', tag);
   }
 
-  for (const target of targets) {
+  for (const target of getBuildTargets()) {
     const packageDir = path.join(packageRoot, 'packages', target.packageName.split('/').pop());
     console.log(`[release] publishing ${target.packageName}`);
     run('npm', publishArgs, { cwd: packageDir });
@@ -190,7 +255,7 @@ async function main() {
     return;
   }
 
-  console.error('Usage: node scripts/release-packages.js <pack|publish> [--dist=<dir>] [--tag=<tag>]');
+  console.error('Usage: node scripts/release-packages.js <pack|publish> [--dist=<dir>] [--tag=<tag>] [--target=<target[,target...]>]');
   process.exit(1);
 }
 
