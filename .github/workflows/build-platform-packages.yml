@@ -49,3 +49,28 @@ jobs:
         with:
           name: npm-packages-${{ matrix.target }}
           path: dist/*.tgz
+
+  publish-packages:
+    needs: build-packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download all platform packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: npm-packages-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish packages to npm
+        run: |
+          for pkg in dist/*.tgz; do
+            npm publish "$pkg" --access public
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
