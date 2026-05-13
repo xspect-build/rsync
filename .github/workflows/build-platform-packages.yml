@@ -70,7 +70,7 @@ jobs:
       - name: Publish packages to npm
         run: |
           for pkg in dist/*.tgz; do
-            npm publish "$pkg" --access public
+            npm publish "./$pkg" --access public
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
