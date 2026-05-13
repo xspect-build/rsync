@@ -145,7 +145,7 @@ function buildRsync(sourceDir, target) {
   ];
 
   run('./configure', configureArgs, { cwd: sourceDir, env });
-  run('make', ['-j', String(Math.max(os.cpus().length, 1)), 'rsync'], { cwd: sourceDir, env });
+  run('make', ['-j', String(Math.max(1, os.cpus().length)), 'rsync'], { cwd: sourceDir, env });
 
   const binaryPath = path.join(sourceDir, target.binaryName);
   if (target.static) {
