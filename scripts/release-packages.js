@@ -145,8 +145,8 @@ function buildRsync(sourceDir, target) {
   ];
 
   run('./configure', configureArgs, { cwd: sourceDir, env });
-  const buildJobs = process.env.MAKE_JOBS || String(Math.max(1, Math.min(os.cpus().length, 8)));
-  run('make', ['-j', buildJobs, 'rsync'], { cwd: sourceDir, env });
+  const parallelJobs = process.env.MAKE_JOBS || String(Math.max(1, Math.min(os.cpus().length, 8)));
+  run('make', ['-j', parallelJobs, 'rsync'], { cwd: sourceDir, env });
 
   const binaryPath = path.join(sourceDir, target.binaryName);
   if (target.static) {
