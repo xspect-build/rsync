@@ -130,8 +130,10 @@ function buildEnvironment(target) {
 }
 
 function buildRsync(sourceDir, target) {
-  if (target.platform !== process.platform || target.arch !== process.arch) {
-    throw new Error(`Target ${target.platform}-${target.arch} must be built on matching host ${process.platform}-${process.arch}`);
+  const targetKey = `${target.platform}-${target.arch}`;
+  const hostKey = `${process.platform}-${process.arch}`;
+  if (targetKey !== hostKey) {
+    throw new Error(`Target ${targetKey} must be built on matching host ${hostKey}`);
   }
 
   const env = buildEnvironment(target);
@@ -143,7 +145,7 @@ function buildRsync(sourceDir, target) {
   ];
 
   run('./configure', configureArgs, { cwd: sourceDir, env });
-  run('make', ['-j', String(os.cpus().length || 2), 'rsync'], { cwd: sourceDir, env });
+  run('make', ['-j', String(Math.max(os.cpus().length, 1)), 'rsync'], { cwd: sourceDir, env });
 
   const binaryPath = path.join(sourceDir, target.binaryName);
   if (target.static) {
