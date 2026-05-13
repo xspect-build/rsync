@@ -3,5 +3,5 @@
 const path = require('node:path');
 
 module.exports = {
-  binaryPath: path.join(__dirname, 'bin', 'oc-rsync')
+  binaryPath: path.join(__dirname, 'bin', 'rsync')
 };

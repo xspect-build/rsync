@@ -1,7 +1,7 @@
 {
   "name": "@xspect-build/rsync-darwin-x64",
-  "version": "0.6.0",
-  "description": "Prebuilt oc-rsync binary for darwin x64",
+  "version": "3.4.2",
+  "description": "Prebuilt rsync binary for darwin x64",
   "main": "index.js",
   "files": [
     "bin",
