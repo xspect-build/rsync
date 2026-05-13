@@ -133,7 +133,7 @@ function buildRsync(sourceDir, target) {
   const targetKey = `${target.platform}-${target.arch}`;
   const hostKey = `${process.platform}-${process.arch}`;
   if (targetKey !== hostKey) {
-    throw new Error(`Cross-compilation not supported: target ${targetKey} must be built on ${hostKey}`);
+    throw new Error(`Cross-compilation not supported: target ${targetKey} must be built on matching platform, current platform is ${hostKey}`);
   }
 
   const env = buildEnvironment(target);
